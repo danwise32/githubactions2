@@ -1,0 +1,48 @@
+name: Create New Blog Post
+
+on:
+  issues:
+    types:
+      - labeled
+
+jobs:
+  create-blog:
+    if: github.event.label.name == 'new-blog'
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Set up the Node.js environment (optional, for formatting tools)
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      # Generate a blog post markdown file
+      - name: Generate Blog Post
+        id: create_file
+        run: |
+          TITLE="${{ github.event.issue.title }}"
+          CONTENT="${{ github.event.issue.body }}"
+          SLUG=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/[^a-z0-9-]//g')
+          FILENAME="blogs/$SLUG.md"
+          
+          echo "---" > $FILENAME
+          echo "title: \"$TITLE\"" >> $FILENAME
+          echo "date: $(date +'%Y-%m-%d')" >> $FILENAME
+          echo "---" >> $FILENAME
+          echo "$CONTENT" >> $FILENAME
+
+          echo "Created $FILENAME"
+
+      # Commit the new blog post
+      - name: Commit Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add blogs/
+          git commit -m "Add new blog post: ${{ github.event.issue.title }}"
+          git push
